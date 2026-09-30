@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Halaman Chat — Hermes 3 70B</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#fbfbfa; --panel:#ffffff; --text:#1b1b1f; --dim:#6f7280;
+    --border:#e9e8e3; --user-bg:#0e7490; --user-text:#ffffff;
+    --asst-bg:#f0efeb; --asst-text:#1b1b1f; --input-bg:#ffffff;
+    --accent:#0e7490; --accent-soft:#e3f4f8;
+    --error:#b42318; --error-bg:#fbeeea; --ok:#067647; --warn:#b54708;
+    --code-bg:#e6e5e0; --code-text:#1b1b1f; --chip:#f0efeb;
+    --shadow: 0 1px 3px rgba(20,20,25,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#131316; --panel:#1c1c21; --text:#f1f1f4; --dim:#9aa0ae;
+      --border:#2c2c33; --user-bg:#0e7490; --user-text:#ffffff;
+      --asst-bg:#222227; --asst-text:#f1f1f4; --input-bg:#1c1c21;
+      --accent:#2dd4bf; --accent-soft:#14333a;
+      --error:#f97066; --error-bg:#2b201d; --ok:#4ade80; --warn:#fdb022;
+      --code-bg:#2c2c34; --code-text:#f1f1f4; --chip:#232329;
+      --shadow: 0 1px 3px rgba(0,0,0,.55);
+    }
+  }
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display:flex; flex-direction:column; height:100dvh; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{ font:inherit; cursor:pointer; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px; background:var(--panel); border-bottom:1px solid var(--border);
+    flex:0 0 auto; z-index:5;
+  }
+  .btn{
+    display:inline-flex; align-items:center; gap:7px;
+    background:transparent; color:var(--text);
+    border:1px solid var(--border); border-radius:999px;
+    padding:8px 14px; font-size:14px; font-weight:600; line-height:1;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .btn:hover{ background:var(--chip); }
+  .btn svg{ width:15px; height:15px; flex:none; }
+  .btn-primary{ background:var(--user-bg); border-color:var(--user-bg); color:#fff; border-radius:10px; }
+  .btn-primary:hover{ background:#0b6278; border-color:#0b6278; }
+  @media (prefers-color-scheme: dark){
+    .btn-primary{ background:#0e7490; border-color:#0e7490; color:#fff; }
+    .btn-primary:hover{ background:#155e75; border-color:#155e75; }
+  }
+  .model-tag{
+    margin:0 auto; max-width:38vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:12.5px; color:var(--dim); background:none; border:none; padding:8px 6px;
+  }
+  .model-tag:hover{ color:var(--text); text-decoration:underline; }
+  @media (max-width:520px){
+    .btn .label{ display:none; }
+    .btn{ padding:8px 10px; }
+  }
+
+  /* ---------- settings panel ---------- */
+  .settings{
+    flex:0 0 auto; background:var(--panel); border-bottom:1px solid var(--border);
+    padding:18px 16px 20px; display:block;
+  }
+  .settings[hidden]{ display:none; }
+  .settings-inner{ max-width:640px; margin:0 auto; }
+  .settings h2{ margin:0 0 4px; font-size:18px; letter-spacing:-.01em; }
+  .settings .lede{ margin:0 0 16px; font-size:14px; color:var(--dim); line-height:1.55; }
+  .settings a{ color:var(--accent); }
+  .field{ margin:0 0 14px; }
+  .field label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px; }
+  .field .scope-note{ display:block; font-weight:400; color:var(--dim); font-size:12.5px; margin-top:6px; line-height:1.5; }
+  .field input[type=text], .field input[type=password], .field input[type=number]{
+    width:100%; padding:10px 12px; font-size:15px; font-family:inherit;
+    background:var(--input-bg); color:var(--text);
+    border:1px solid var(--border); border-radius:9px;
+  }
+  .field input[type=text]:focus, .field input[type=password]:focus, .field input[type=number]:focus{
+    border-color:var(--accent); outline:none;
+  }
+  .field input.mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13.5px; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row .field{ flex:1 1 0; }
+  input[type=range]{ width:100%; accent-color:var(--accent); }
+  .range-val{ font-variant-numeric:tabular-nums; font-size:12.5px; color:var(--dim); }
+  .settings-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; align-items:center; }
+  .btn-ghost{
+    background:transparent; color:var(--dim); border:1px solid var(--border);
+    border-radius:10px; padding:10px 16px; font-size:14px; font-weight:600;
+  }
+  .btn-ghost:hover{ color:var(--text); background:var(--chip); }
+  .btn-danger-text{ background:none; border:none; color:var(--error); font-size:13.5px; padding:10px 6px; }
+  .btn-danger-text:hover{ text-decoration:underline; }
+  .check-status{ margin-top:14px; font-size:13.5px; line-height:1.5; border-radius:9px; padding:10px 12px; display:none; }
+  .check-status.show{ display:block; }
+  .check-status.ok{ background:var(--accent-soft); color:var(--ok); }
+  .check-status.err{ background:var(--error-bg); color:var(--error); }
+  .check-status.working{ background:var(--chip); color:var(--dim); }
+
+  /* ---------- chat ---------- */
+  .chat{
+    flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain;
+    padding:20px 16px 24px; scroll-behavior:smooth;
+  }
+  .chat-column{ max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+  .msg{ display:flex; flex-direction:column; max-width:100%; }
+  .msg .meta{
+    font-size:11.5px; color:var(--dim); margin:0 4px 4px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .msg.user{ align-items:flex-end; }
+  .msg.user .bubble{
+    background:var(--user-bg); color:var(--user-text);
+    border-radius:18px 18px 4px 18px;
+  }
+  .msg.assistant{ align-items:flex-start; }
+  .msg.assistant .bubble{
+    background:var(--asst-bg); color:var(--asst-text);
+    border-radius:18px 18px 18px 4px; box-shadow:var(--shadow);
+  }
+  .msg.error .bubble{ background:var(--error-bg); color:var(--error); border:1px solid var(--error); border-radius:18px; }
+  .msg .bubble{
+    max-width:min(88%, 620px); padding:11px 15px; font-size:15px; line-height:1.6;
+    overflow-wrap:anywhere; word-break:break-word;
+  }
+  .msg.user .bubble{ white-space:pre-wrap; }
+  .msg .content p{ margin:.5em 0; }
+  .msg .content p:first-child{ margin-top:0; }
+  .msg .content p:last-child{ margin-bottom:0; }
+  .msg .content h2,.msg .content h3,.msg .content h4{ margin:.9em 0 .4em; line-height:1.3; font-size:1.05em; }
+  .msg .content ul,.msg .content ol{ margin:.5em 0; padding-left:1.4em; }
+  .msg .content li{ margin:.25em 0; }
+  .msg .content blockquote{
+    margin:.6em 0; padding:2px 0 2px 12px; border-left:3px solid var(--border); color:var(--dim);
+  }
+  .msg .content code{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:.86em; background:var(--code-bg); color:var(--code-text);
+    padding:1px 6px; border-radius:6px;
+  }
+  .msg.assistant .bubble .content a, .msg.error .bubble .content a{ color:var(--accent); }
+  .msg .content pre{
+    background:var(--code-bg); color:var(--code-text);
+    border-radius:9px; padding:12px 12px 8px; margin:.7em 0;
+    overflow-x:auto; position:relative; font-size:.88em; line-height:1.55;
+  }
+  .msg .content pre code{ background:none; padding:0; display:block; white-space:pre; }
+  .copy-code{
+    position:sticky; float:right; top:0; margin:-4px -4px 0 0;
+    background:var(--panel); color:var(--text); border:1px solid var(--border);
+    border-radius:7px; font-size:12px; font-weight:600; padding:4px 9px; line-height:1.4;
+  }
+  .copy-code:hover{ background:var(--chip); }
+  .msg .actions{ margin-top:5px; padding:0 4px; }
+  .copy-msg{
+    background:none; border:none; color:var(--dim); font-size:12.5px; padding:2px 4px;
+  }
+  .copy-msg:hover{ color:var(--text); text-decoration:underline; }
+
+  /* typing indicator */
+  .typing{ display:inline-flex; gap:5px; padding:6px 2px; align-items:center; }
+  .typing span{
+    width:7px; height:7px; border-radius:50%; background:var(--dim); opacity:.45;
+    animation: blink 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:.15s; }
+  .typing span:nth-child(3){ animation-delay:.3s; }
+  @keyframes blink{ 0%,60%,100%{ opacity:.25; transform:translateY(0);} 30%{ opacity:1; transform:translateY(-3px);} }
+  @media (prefers-reduced-motion: reduce){
+    .typing span{ animation:none; opacity:.6; }
+    .chat{ scroll-behavior:auto; }
+  }
+
+  /* ---------- empty state ---------- */
+  .empty{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    padding:48px 16px; color:var(--dim);
+  }
+  .empty[hidden]{ display:none; }
+  .empty svg{ width:56px; height:56px; opacity:.5; margin-bottom:14px; }
+  .empty h2{ margin:0 0 6px; font-size:20px; color:var(--text); letter-spacing:-.01em; }
+  .empty p{ margin:0 0 22px; font-size:14px; max-width:420px; line-height:1.6; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .chip{
+    background:var(--chip); color:var(--text); border:1px solid var(--border);
+    border-radius:999px; padding:8px 15px; font-size:13.5px; line-height:1.4;
+  }
+  .chip:hover{ border-color:var(--accent); }
+
+  /* ---------- composer ---------- */
+  .composer-wrap{
+    flex:0 0 auto; background:var(--bg);
+    border-top:1px solid var(--border);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .composer-inner{ max-width:720px; margin:0 auto; }
+  .composer{
+    display:flex; align-items:flex-end; gap:8px;
+    background:var(--panel); border:1px solid var(--border); border-radius:22px;
+    padding:7px 7px 7px 16px; box-shadow:var(--shadow);
+  }
+  .composer:focus-within{ border-color:var(--accent); }
+  .composer textarea{
+    flex:1 1 auto; border:none; background:none; resize:none; outline:none;
+    font:inherit; font-size:15.5px; line-height:1.5; color:var(--text);
+    max-height:140px; padding:8px 0; display:block;
+  }
+  .composer textarea::placeholder{ color:var(--dim); }
+  .send-btn{
+    flex:0 0 auto; width:40px; height:40px; border-radius:50%;
+    border:none; background:var(--user-bg); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .send-btn svg{ width:18px; height:18px; }
+  .send-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .send-btn.stop{ background:var(--error); }
+  .composer-hint{
+    margin:8px 2px 0; font-size:12px; color:var(--dim); text-align:center; line-height:1.5;
+  }
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+    background:#22242a; color:#fff; font-size:13.5px; line-height:1.45;
+    padding:10px 16px; border-radius:10px; max-width:min(90vw, 480px);
+    box-shadow:0 6px 24px rgba(0,0,0,.28); z-index:50; text-align:center;
+  }
+  @media (prefers-color-scheme: dark){ .toast{ background:#f1f1f4; color:#131316; } }
+  .toast[hidden]{ display:none; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <button class="btn" id="btnNew" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="label">Obrolan baru</span>
+    </button>
+    <button class="model-tag" id="modelTag" type="button" title="Ganti model di Pengaturan"></button>
+    <button class="btn" id="btnSettings" type="button" aria-expanded="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="label">Pengaturan</span>
+    </button>
+  </header>
+
+  <section class="settings" id="settings" aria-label="Pengaturan">
+    <div class="settings-inner">
+      <h2>Hubungkan ke Hugging Face</h2>
+      <p class="lede">Tempel di bawah ini. Butuh token baru? Buat di
+        <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">huggingface.co/settings/tokens</a>
+        (tipe <em>Fine-grained</em>) dan aktifkan izin <strong>Make calls to Inference Providers</strong>.</p>
+
+      <div class="field">
+        <label for="inpToken">Token Hugging Face <span class="scope-note" style="display:inline">— dipakai hanya untuk panggilan API dari halaman ini, dan <strong>tidak disimpan di mana pun</strong>. Saat halaman ditutup atau dimuat ulang, token hilang dan harus ditempel ulang.</span></label>
+        <input type="password" id="inpToken" autocomplete="off" spellcheck="false" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+      </div>
+
+      <div class="field">
+        <label for="inpModel">Model</label>
+        <input type="text" id="inpModel" class="mono" autocomplete="off" spellcheck="false" value="NousResearch/Hermes-3-Llama-3.1-70B" />
+      </div>
+
+      <div class="field">
+        <label for="inpBase">Server API</label>
+        <input type="text" id="inpBase" class="mono" autocomplete="off" spellcheck="false" value="https://router.huggingface.co/v1" />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="inpTemp">Kreativitas <span class="range-val" id="tempVal">0.7</span></label>
+          <input type="range" id="inpTemp" min="0" max="1.5" step="0.1" value="0.7" />
+        </div>
+        <div class="field">
+          <label for="inpMaxTok">Panjang jawaban maks.</label>
+          <input type="number" id="inpMaxTok" min="64" max="8192" step="64" value="2048" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="inpSystem">Peran asisten <span style="font-weight:400;color:var(--dim)">(opsional)</span></label>
+        <input type="text" id="inpSystem" autocomplete="off" value="Kamu adalah asisten AI yang membantu. Jawablah dalam bahasa Indonesia yang santai, jelas, dan langsung ke intinya." />
+      </div>
+
+      <div class="settings-actions">
+        <button class="btn btn-primary" id="btnStart" type="button">Mulai ngobrol</button>
+        <button class="btn-ghost" id="btnCheck" type="button">Cek token</button>
+        <button class="btn-danger-text" id="btnForget" type="button">Lupakan token</button>
+      </div>
+      <div class="check-status" id="checkStatus" role="status"></div>
+    </div>
+  </section>
+
+  <main class="chat" id="chat">
+    <div class="chat-column" id="chatColumn">
+      <div class="empty" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <h2>Siap ngobrol</h2>
+        <p>Setelah token terpasang, tulis pesan di bawah dan Hermes 3 70B akan menjawabnya di sini.</p>
+        <div class="chips" id="chips">
+          <button class="chip" type="button">Jelaskan bug IDOR dengan contoh nyata</button>
+          <button class="chip" type="button">Buatkan rencana belajar bug bounty 1 bulan</button>
+          <button class="chip" type="button">Tulis puisi pendek tentang hujan</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="composer-wrap">
+    <div class="composer-inner">
+      <div class="composer">
+        <textarea id="inpMsg" rows="1" placeholder="Tulis pesan, lalu tekan Enter…" aria-label="Tulis pesan"></textarea>
+        <button class="send-btn" id="btnSend" type="button" aria-label="Kirim pesan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+        <button class="send-btn stop" id="btnStop" type="button" aria-label="Hentikan jawaban" hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        </button>
+      </div>
+      <p class="composer-hint">Token tidak pernah disimpan — hanya dipakai untuk jawaban yang kamu minta. Enter kirim, Shift+Enter baris baru.</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- state (in-memory only; never persisted) ---------- */
+  var state = {
+    token: '',
+    model: 'NousResearch/Hermes-3-Llama-3.1-70B',
+    base: 'https://router.huggingface.co/v1',
+    system: '',
+    temperature: 0.7,
+    maxTokens: 2048,
+    messages: [],       // {role:'user'|'assistant', content:'', model:'', streaming:bool}
+    streaming: false,
+    controller: null,   // AbortController for the active request
+    stickBottom: true,
+    configured: false
+  };
+
+  /* ---------- dom refs ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var settingsEl = $('settings'), btnSettings = $('btnSettings'), btnNew = $('btnNew'), modelTag = $('modelTag');
+  var inpToken = $('inpToken'), inpModel = $('inpModel'), inpBase = $('inpBase'),
+      inpTemp = $('inpTemp'), tempVal = $('tempVal'), inpMaxTok = $('inpMaxTok'), inpSystem = $('inpSystem');
+  var btnStart = $('btnStart'), btnCheck = $('btnCheck'), btnForget = $('btnForget'), checkStatus = $('checkStatus');
+  var chatEl = $('chat'), chatColumn = $('chatColumn'), emptyState = $('emptyState'), chips = $('chips');
+  var inpMsg = $('inpMsg'), btnSend = $('btnSend'), btnStop = $('btnStop'), toastEl = $('toast');
+
+  state.system = inpSystem.value;
+
+  /* ---------- helpers ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, 3200);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* Compact markdown renderer. Input is escaped first, so model/user text
+     can never inject markup. Only http(s) links are allowed. */
+  function inlineMd(src) {
+    var s = escapeHtml(src);
+    s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    s = s.replace(/!\[([^\]]*)\]\([^)\s]*\)/g, '$1'); // no images: drop to alt text
+    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (m, text, url) {
+      var u = url.replace(/&amp;/g, '&');
+      if (/^https?:\/\//i.test(u)) {
+        return '<a href="' + escapeHtml(u) + '" target="_blank" rel="noopener noreferrer">' + text + '</a>';
+      }
+      return text; // unsafe scheme: keep readable text only
+    });
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|\W)\*([^*]+)\*/g, '$1<em>$2</em>');
+    return s;
+  }
+
+  function renderMarkdown(src) {
+    var lines = String(src).split('\n');
+    var html = '', i = 0;
+    var inCode = false, codeBuf = [], lang = '';
+    var listOpen = null, listItems = []; // null | {ordered:bool}
+
+    function closeCode() {
+      var code = escapeHtml(codeBuf.join('\n'));
+      html += '<pre><button type="button" class="copy-code" data-copy-code>Salin</button>' +
+              '<code' + (lang ? ' class="' + escapeHtml(lang) + '"' : '') + '>' + code + '</code></pre>';
+    }
+    function flushList() {
+      if (!listOpen) { return; }
+      var tag = listOpen.ordered ? 'ol' : 'ul';
+      html += '<' + tag + '>';
+      for (var k = 0; k < listItems.length; k++) { html += '<li>' + inlineMd(listItems[k]) + '</li>'; }
+      html += '</' + tag + '>';
+      listOpen = null; listItems = [];
+    }
+    function flushQuote(buf) {
+      if (!buf.length) { return; }
+      html += '<blockquote>';
+      var p = [];
+      for (var k = 0; k < buf.length; k++) {
+        if (buf[k].trim() === '') {
+          if (p.length) { html += '<p>' + inlineMd(p.join(' ')) + '</p>'; p = []; }
+        } else { p.push(buf[k]); }
+      }
+      if (p.length) { html += '<p>' + inlineMd(p.join(' ')) + '</p>'; }
+      html += '</blockquote>';
+    }
+
+    while (i < lines.length) {
+      var line = lines[i];
+      if (/^```/.test(line)) {
+        if (inCode) { closeCode(); inCode = false; codeBuf = []; }
+        else { flushList(); inCode = true; lang = line.slice(3).trim(); }
+        i++; continue;
+      }
+      if (inCode) { codeBuf.push(line); i++; continue; }
+      if (line.trim() === '') { flushList(); i++; continue; }
+
+      var m;
+      if ((m = line.match(/^(#{1,4})\s+(.*)$/))) {
+        flushList();
+        var lvl = Math.min(m[1].length + 1, 4);
+        html += '<h' + lvl + '>' + inlineMd(m[2]) + '</h' + lvl + '>';
+        i++; continue;
+      }
+      if (/^\s*(---+|\*\*\*+)\s*$/.test(line)) { flushList(); html += '<hr />'; i++; continue; }
+
+      var um = line.match(/^\s*[-*]\s+(.*)$/);
+      var om = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      if (um || om) {
+        var ordered = !!om, text = (um ? um[1] : om[1]);
+        if (listOpen && listOpen.ordered !== ordered) { flushList(); }
+        listOpen = listOpen || { ordered: ordered };
+        listItems.push(text);
+        i++; continue;
+      }
+      if (/^\s*>\s?(.*)$/.test(line)) {
+        flushList();
+        var qbuf = [];
+        while (i < lines.length) {
+          var qm = lines[i].match(/^\s*>\s?(.*)$/);
+          if (!qm) { break; }
+          qbuf.push(qm[1]); i++;
+        }
+        flushQuote(qbuf);
+        continue;
+      }
+      flushList();
+      html += '<p>' + inlineMd(line) + '</p>';
+      i++;
+    }
+    if (inCode) { closeCode(); } // unterminated fence (mid-stream): still render
+    flushList();
+    return html;
+  }
+
+  function shortModel(id) {
+    var s = String(id || '').replace(/^https?:\/\/[^/]+\//, '');
+    var parts = s.split('/');
+    return parts[parts.length - 1] || s;
+  }
+
+  /* ---------- friendly API errors (Indonesian) ---------- */
+  var HF_TOKENS_URL = 'https://huggingface.co/settings/tokens';
+  function friendlyError(status, apiMessage) {
+    var extra = apiMessage ? '\n\nDetail server: `' + String(apiMessage).replace(/`/g, '') + '`' : '';
+    switch (status) {
+      case 401:
+        return '**Token tidak valid (401).**\n\nToken mungkin salah ketik atau sudah kedaluwarsa. Buat token baru di [Hugging Face · Access Tokens](' + HF_TOKENS_URL + '), lalu tempel ulang di Pengaturan.';
+      case 402:
+        return '**Pembayaran / kuota (402).**\n\nAkun kehabisan kuota atau butuh upgrade untuk model ini. Cek di akun Hugging Face kamu.' + extra;
+      case 403:
+        return '**Akses ditolak (403).**\n\nPastikan token bertipe *Fine-grained* dengan izin **Make calls to Inference Providers**, dan modelnya tidak digembok (*gated*) untuk akunmu.' + extra;
+      case 404:
+        return '**Model tidak ditemukan (404).**\n\nPeriksa ID model di Pengaturan — contoh yang valid: `NousResearch/Hermes-3-Llama-3.1-70B`.' + extra;
+      case 429:
+        return '**Rate limit (429).**\n\nTerlalu banyak permintaan — tunggu sebentar, lalu kirim lagi.' + extra;
+      case 503:
+        return '**Model sedang dimuat (503).**\n\nTunggu beberapa detik, lalu kirim pesanmu lagi.';
+      case 0:
+        return '**Tidak bisa terhubung.**\n\nPeriksa koneksi internet, lalu coba lagi.';
+      default:
+        if (status >= 500 && status < 600) {
+          return '**Server Hugging Face bermasalah (status ' + status + ').**\n\nCoba lagi beberapa saat.' + extra;
+        }
+        return '**Permintaan gagal (status ' + status + ').**' + extra;
+    }
+  }
+
+  /* ---------- scroll stickiness ---------- */
+  chatEl.addEventListener('scroll', function () {
+    state.stickBottom = (chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight) < 140;
+  });
+  function maybeScroll() {
+    if (state.stickBottom) { chatEl.scrollTop = chatEl.scrollHeight; }
+  }
+
+  /* ---------- message rendering ---------- */
+  function el(tag, cls, html) {
+    var d = document.createElement(tag);
+    if (cls) { d.className = cls; }
+    if (html !== undefined) { d.innerHTML = html; }
+    return d;
+  }
+
+  function renderMessage(idx) {
+    var msg = state.messages[idx];
+    var wrap = el('div', 'msg ' + (msg.error ? 'error' : msg.role));
+    wrap.setAttribute('data-idx', idx);
+    if (msg.role === 'assistant' && !msg.error) {
+      wrap.appendChild(el('div', 'meta', escapeHtml(msg.model ? shortModel(msg.model) : 'asisten')));
+    }
+    var bubble = el('div', 'bubble');
+    var content = el('div', 'content');
+    if (msg.streaming) {
+      content.appendChild(el('span', 'typing', '<span></span><span></span><span></span>'));
+    } else if (msg.role === 'user') {
+      content.textContent = msg.content;
+    } else if (msg.error) {
+      content.innerHTML = renderMarkdown(msg.content);
+    } else {
+      content.innerHTML = renderMarkdown(msg.content);
+    }
+    bubble.appendChild(content);
+    wrap.appendChild(bubble);
+    if (msg.role === 'assistant' && !msg.streaming && !msg.error) {
+      var actions = el('div', 'actions');
+      var b = el('button', 'copy-msg');
+      b.type = 'button'; b.setAttribute('data-copy-msg', ''); b.textContent = 'Salin jawaban';
+      actions.appendChild(b);
+      wrap.appendChild(actions);
+    }
+    return wrap;
+  }
+
+  function redrawMessage(idx) {
+    var old = chatColumn.querySelector('[data-idx="' + idx + '"]');
+    if (old) { old.replaceWith(renderMessage(idx)); }
+    maybeScroll();
+  }
+
+  function appendMessageDom(idx) {
+    chatColumn.appendChild(renderMessage(idx));
+    emptyState.hidden = true;
+    maybeScroll();
+  }
+
+  /* copy actions (delegated) */
+  chatColumn.addEventListener('click', function (e) {
+    var codeBtn = e.target.closest('[data-copy-code]');
+    if (codeBtn) {
+      var pre = codeBtn.closest('pre');
+      var code = pre ? pre.querySelector('code') : null;
+      copyText(code ? code.textContent : '');
+      return;
+    }
+    var msgBtn = e.target.closest('[data-copy-msg]');
+    if (msgBtn) {
+      var msgEl = msgBtn.closest('.msg');
+      var msg = msgEl ? state.messages[parseInt(msgEl.getAttribute('data-idx'), 10)] : null;
+      copyText(msg ? msg.content : '');
+    }
+  });
+
+  function copyText(text) {
+    if (!text) { return; }
+    function done() { toast('Disalin ke clipboard.'); }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (err) { toast('Gagal menyalin.'); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else { fallback(); }
+  }
+
+  /* ---------- settings ---------- */
+  function refreshModelTag() {
+    modelTag.textContent = shortModel(state.model);
+  }
+  function openSettings() {
+    settingsEl.hidden = false;
+    btnSettings.setAttribute('aria-expanded', 'true');
+    inpToken.focus();
+  }
+  function closeSettings() {
+    settingsEl.hidden = true;
+    btnSettings.setAttribute('aria-expanded', 'false');
+  }
+  function applySettings() {
+    state.token = inpToken.value.trim();
+    state.model = inpModel.value.trim() || state.model;
+    state.base = (inpBase.value.trim() || state.base).replace(/\/+$/, '');
+    state.temperature = parseFloat(inpTemp.value);
+    state.maxTokens = Math.max(64, parseInt(inpMaxTok.value, 10) || 2048);
+    state.system = inpSystem.value.trim();
+    refreshModelTag();
+  }
+  function checkSettingsStatus() {
+    if (state.configured) { closeSettings(); }
+  }
+
+  btnSettings.addEventListener('click', function () {
+    if (settingsEl.hidden) { openSettings(); } else { checkSettingsStatus(); }
+  });
+  modelTag.addEventListener('click', openSettings);
+
+  btnStart.addEventListener('click', function () {
+    applySettings();
+    if (!state.token) {
+      toast('Tempel token Hugging Face dulu.');
+      inpToken.focus();
+      return;
+    }
+    state.configured = true;
+    closeSettings();
+    toast('Terhubung ke ' + shortModel(state.model) + '. Silakan ngobrol.');
+    inpMsg.focus();
+  });
+
+  btnForget.addEventListener('click', function () {
+    inpToken.value = '';
+    state.token = '';
+    state.configured = false;
+    setCheckStatus('', '');
+    toast('Token dihapus dari halaman ini.');
+  });
+
+  inpTemp.addEventListener('input', function () {
+    tempVal.textContent = parseFloat(inpTemp.value).toFixed(1);
+  });
+
+  function setCheckStatus(kind, text) {
+    checkStatus.className = 'check-status' + (kind ? ' show ' + kind : '');
+    checkStatus.textContent = text || '';
+  }
+
+  btnCheck.addEventListener('click', function () {
+    var token = inpToken.value.trim();
+    var model = inpModel.value.trim();
+    var base = (inpBase.value.trim() || state.base).replace(/\/+$/, '');
+    if (!token) { setCheckStatus('err', 'Tempel token dulu sebelum dicoba.'); return; }
+    setCheckStatus('working', 'Menghubungi server…');
+    btnCheck.disabled = true;
+    fetch(base + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 4, stream: false })
+    }).then(function (res) {
+      btnCheck.disabled = false;
+      if (res.ok) {
+        setCheckStatus('ok', 'OK — token valid dan model merespons. Tekan "Mulai ngobrol".');
+        return null;
+      }
+      return res.text().then(function () {
+        setCheckStatus('err', shortStatusLine(res.status));
+      });
+    }).catch(function () {
+      btnCheck.disabled = false;
+      setCheckStatus('err', 'Tidak bisa terhubung ke server. Periksa koneksi internet.');
+    });
+  });
+
+  function shortStatusLine(status) {
+    switch (status) {
+      case 401: return '401 — token tidak valid. Buat token baru di huggingface.co/settings/tokens.';
+      case 403: return '403 — akses ditolak. Pastikan token punya izin "Make calls to Inference Providers".';
+      case 404: return '404 — model tidak ditemukan. Periksa ID model.';
+      case 429: return '429 — rate limit. Tunggu sebentar.';
+      case 503: return '503 — model sedang dimuat. Coba lagi sebentar.';
+      default: return 'Gagal (status ' + status + ').';
+    }
+  }
+
+  refreshModelTag();
+
+  /* ---------- chat actions ---------- */
+  function setStreamingUI(on) {
+    state.streaming = on;
+    btnSend.hidden = on;
+    btnStop.hidden = !on;
+    btnNew.disabled = on;
+  }
+
+  function pushMessage(role, content, extra) {
+    var msg = { role: role, content: content };
+    if (extra) { for (var k in extra) { msg[k] = extra[k]; } }
+    state.messages.push(msg);
+    return state.messages.length - 1;
+  }
+
+  function isTypingReady() {
+    if (!state.token) {
+      if (settingsEl.hidden) { openSettings(); }
+      toast('Tempel token Hugging Face dulu di Pengaturan.');
+      return false;
+    }
+    if (state.streaming) { return false; }
+    return true;
+  }
+
+  function send(text) {
+    if (!isTypingReady()) { return; }
+    var userIdx = pushMessage('user', text);
+    appendMessageDom(userIdx);
+    var asstIdx = pushMessage('assistant', '', { streaming: true, model: state.model });
+    appendMessageDom(asstIdx);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    setStreamingUI(true);
+    state.controller = new AbortController();
+    runStream(userIdx, asstIdx);
+  }
+
+  function streamPayload() {
+    var msgs = [];
+    if (state.system) { msgs.push({ role: 'system', content: state.system }); }
+    for (var i = 0; i < state.messages.length; i++) {
+      var m = state.messages[i];
+      if (m.error || m.streaming) { continue; }
+      msgs.push({ role: m.role, content: m.content });
+    }
+    return {
+      model: state.model,
+      messages: msgs,
+      stream: true,
+      temperature: state.temperature,
+      max_tokens: state.maxTokens
+    };
+  }
+
+  function runStream(userIdx, asstIdx) {
+    var full = '';
+    var settled = false;
+    var rafPending = false;
+    var msg = state.messages[asstIdx];
+
+    function finish() {
+      if (settled) { return; }
+      settled = true;
+      msg.streaming = false;
+      msg.content = full || '(model mengembalikan jawaban kosong)';
+      setStreamingUI(false);
+      state.controller = null;
+      redrawMessage(asstIdx);
+    }
+    function fail(status, apiMessage) {
+      if (settled) { return; }
+      settled = true;
+      setStreamingUI(false);
+      state.controller = null;
+      msg.streaming = false;
+      msg.content = friendlyError(status, apiMessage);
+      msg.error = true;
+      msg.role = 'assistant';
+      redrawMessage(asstIdx);
+    }
+    function paint() {
+      rafPending = false;
+      msg.content = full;
+      var contentEl = chatColumn.querySelector('[data-idx="' + asstIdx + '"] .content');
+      if (contentEl) { contentEl.innerHTML = renderMarkdown(full); }
+      maybeScroll();
+    }
+    function schedulePaint() {
+      if (!rafPending) { rafPending = true; requestAnimationFrame(paint); }
+    }
+
+    fetch(state.base + '/chat/completions', {
+      method: 'POST',
+      signal: state.controller.signal,
+      headers: { 'Authorization': 'Bearer ' + state.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(streamPayload())
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (txt) {
+          var apiMsg = '';
+          try {
+            var j = JSON.parse(txt);
+            if (j && j.error) { apiMsg = typeof j.error === 'string' ? j.error : (j.error.message || ''); }
+          } catch (e) { /* HTML error page (e.g. 401): keep status-based message */ }
+          // repurpose the empty assistant shell as the error bubble
+          fail(res.status, apiMsg);
+        });
+      }
+      if (!res.body || !res.body.getReader) { fail(res.status || 500, ''); return null; }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) { finish(); return; }
+          buffer += decoder.decode(r.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line.slice(0, 5) !== 'data:') { continue; }
+            var payload = line.slice(5).trim();
+            if (payload === '[DONE]') { finish(); return; }
+            try {
+              var j = JSON.parse(payload);
+              var delta = j && j.choices && j.choices[0] && j.choices[0].delta;
+              var piece = delta && delta.content;
+              if (typeof piece === 'string' && piece) { full += piece; schedulePaint(); }
+            } catch (e) { /* skip malformed chunk */ }
+          }
+          return pump();
+        });
+      }
+      return pump();
+    }).catch(function (err) {
+      if (err && err.name === 'AbortError') {
+        // stopped by user: keep partial text if any
+        if (full) { finish(); }
+        else { msg.streaming = false; msg.content = '(dibatalkan)'; setStreamingUI(false); state.controller = null; redrawMessage(asstIdx); }
+      } else {
+        fail(0, '');
+      }
+    });
+  }
+
+  btnSend.addEventListener('click', function () {
+    var text = inpMsg.value.trim();
+    if (!text) { return; }
+    inpMsg.value = '';
+    autoresize();
+    send(text);
+  });
+
+  btnStop.addEventListener('click', function () {
+    if (state.controller) { state.controller.abort(); }
+  });
+
+  btnNew.addEventListener('click', function () {
+    if (state.streaming && state.controller) { state.controller.abort(); }
+    state.messages = [];
+    chatColumn.innerHTML = '';
+    chatColumn.appendChild(emptyState);
+    emptyState.hidden = false;
+    setStreamingUI(false);
+    chatEl.scrollTop = 0;
+  });
+
+  /* chips fill the composer */
+  chips.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) { return; }
+    inpMsg.value = chip.textContent.trim();
+    autoresize();
+    inpMsg.focus();
+  });
+
+  /* composer textarea */
+  function autoresize() {
+    inpMsg.style.height = 'auto';
+    inpMsg.style.height = Math.min(inpMsg.scrollHeight, 140) + 'px';
+  }
+  inpMsg.addEventListener('input', autoresize);
+  inpMsg.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      btnSend.click();
+    }
+  });
+  autoresize();
+
+  /* clear token from memory when leaving */
+  window.addEventListener('beforeunload', function () { state.token = ''; });
+
+})();
+</script>
+</body>
+</html>

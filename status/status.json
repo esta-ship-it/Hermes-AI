@@ -1,0 +1,28 @@
+{
+ "updated": "2026-10-01 00:25:07",
+ "router": {
+  "online": true,
+  "combo": [
+   "gemini-3.7-flash",
+   "gemini-3-flash-preview",
+   "zai-org/GLM-5.3",
+   "deepseek-ai/DeepSeek-V4.1-Flash",
+   "moonshotai/Kimi-K3",
+   "Qwen/Qwen3.8-27B"
+  ]
+ },
+ "bots": {
+  "diablo": {
+   "online": true,
+   "pid": 35023,
+   "uptime": "54:31"
+  },
+  "ultradiablo": {
+   "online": true,
+   "pid": 35029,
+   "uptime": "54:28"
+  }
+ },
+ "llm_local": true,
+ "primary_model": "gemini-3.7-flash"
+}

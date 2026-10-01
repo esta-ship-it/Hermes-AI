@@ -1,21 +1,29 @@
 {
- "updated": "2026-10-01 07:46:38",
+ "updated": "2026-10-01 07:51:39",
  "router": {
-  "online": false,
-  "combo": []
+  "online": true,
+  "combo": [
+   "gemini-3.7-flash",
+   "gemini-3-flash-preview",
+   "zai-org/GLM-5.3",
+   "deepseek-ai/DeepSeek-V4.1-Flash",
+   "moonshotai/Kimi-K3",
+   "Qwen/Qwen3.8-27B",
+   "openai/gpt-oss-20b"
+  ]
  },
  "bots": {
   "diablo": {
    "online": true,
    "pid": 1904,
-   "uptime": "01:38:55"
+   "uptime": "01:43:56"
   },
   "ultradiablo": {
    "online": true,
-   "pid": 1909,
-   "uptime": "01:38:55"
+   "pid": 10192,
+   "uptime": "03:29"
   }
  },
  "llm_local": true,
- "primary_model": "-"
+ "primary_model": "gemini-3.7-flash"
 }

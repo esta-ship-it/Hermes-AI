@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-01 06:56:41",
+ "updated": "2026-10-01 07:01:37",
  "router": {
   "online": true,
   "combo": [
@@ -16,12 +16,12 @@
   "diablo": {
    "online": true,
    "pid": 1904,
-   "uptime": "48:58"
+   "uptime": "53:54"
   },
   "ultradiablo": {
    "online": true,
    "pid": 1909,
-   "uptime": "48:58"
+   "uptime": "53:54"
   }
  },
  "llm_local": true,
